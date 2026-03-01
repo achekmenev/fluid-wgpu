@@ -1,0 +1,12 @@
+# Dependency directories
+node_modules/
+
+# TypeScript compiled output
+dist/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
