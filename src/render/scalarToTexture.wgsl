@@ -1,7 +1,14 @@
+struct Uniforms {
+  minValue: f32,
+  maxValue: f32
+};
+
 // Scalar component at the cell center
 @group(0) @binding(0) var<storage> f: array<f32>;
 // Texture to render the data on
 @group(0) @binding(1) var outputImage: texture_storage_2d<rgba8unorm, write>;
+//@group(0) @binding(2) var<storage> minMax: array<f32>;
+@group(0) @binding(2) var<uniform> uniforms: Uniforms;
 
 override workgroupSizeX = 8;
 override workgroupSizeY = 8;
@@ -35,8 +42,12 @@ fn main(@builtin(global_invocation_id) id: vec3u) {
     let val = f[i];
 
     const negativeColor = vec3f(0, 0, 0);
-    const minValue = 0.0;
-    const maxValue = 1.0;
+    //const minValue = 0.0;
+    //const maxValue = 1.0;
+    //let minValue = minMax[0];
+    //let maxValue = minMax[1];
+    let minValue = uniforms.minValue;
+    let maxValue = uniforms.maxValue;
 
     let valNormalized = (val - minValue) / (maxValue - minValue);
 

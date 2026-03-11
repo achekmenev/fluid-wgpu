@@ -23,6 +23,7 @@ const CellType_Inflow: CellType = 1;
 const CellType_Outflow: CellType = 2;
 const CellType_SolidFreeSlip: CellType = 3;
 const CellType_SolidNoSlip: CellType = 4;
+const CellType_OutflowMembrane: CellType = 5;
 
 fn CellType_isSolid(cell: CellType) -> bool {
   return cell == CellType_SolidFreeSlip || cell == CellType_SolidNoSlip;
@@ -32,7 +33,7 @@ fn CellType_isMass(cell: CellType) -> bool {
   return cell == CellType_Fluid || cell == CellType_Inflow;
 }
 
-const cellTypesNum = 5;
+const cellTypesNum = 6;
 // Possible values between 1.0 -- pure Neumann and -1.0 -- pure Dirichlet.
 // Intermediate values give intermediate behaviour.
 const tangentVelocityNeumannDirichletMultBC = array<f32, cellTypesNum>(
@@ -40,7 +41,8 @@ const tangentVelocityNeumannDirichletMultBC = array<f32, cellTypesNum>(
   - 1, // inflow: pure Dirichlet
   1, // outflow: pure Neumann
   1, // solid free-slip: pure Neumann
-  - 1 // solid no-slip: pure Dirichlet
+  - 1, // solid no-slip: pure Dirichlet
+  1, // outflow membrane: pure Neumann
 );
 
 const directions = array<vec2i, 4>(vec2(- 1, 0), vec2(1, 0), vec2(0, - 1), vec2(0, 1));
@@ -158,7 +160,7 @@ fn setBoundaryNormalVelocityAndPressure(@builtin(global_invocation_id) id: vec3u
         }
       }
 
-      // For this to be correct there should be no fluic cells just between two outflow cells.
+      // For this to be correct there should be no fluid cells just between two outflow cells.
       // Bad: OFO. Good: OFFO, OFFFO, ...
       case CellType_Outflow: {
         if (dir.x == - 1) {
@@ -176,6 +178,25 @@ fn setBoundaryNormalVelocityAndPressure(@builtin(global_invocation_id) id: vec3u
         else {
           // Top
           v[cellIndex(x, y + 1)] = v[cellIndex(x, y + 2)];
+        }
+      }
+
+      case CellType_OutflowMembrane: {
+        if (dir.x == - 1) {
+          // Left
+          u[i] = max(0.0, u[cellIndex(x - 1, y)]);
+        }
+        else if (dir.x == 1) {
+          // Right
+          u[cellIndex(x + 1, y)] = min(0.0, u[cellIndex(x + 2, y)]);
+        }
+        else if (dir.y == - 1) {
+          // Bottom
+          v[i] = max(0.0, v[cellIndex(x, y - 1)]);
+        }
+        else {
+          // Top
+          v[cellIndex(x, y + 1)] = min(0.0, v[cellIndex(x, y + 2)]);
         }
       }
     }

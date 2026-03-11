@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types":["@webgpu/types", "@types/jest"]
+    "types":["@webgpu/types", "@types/jest", "node"]
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["./dist", "./node_modules"],

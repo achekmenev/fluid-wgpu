@@ -7,6 +7,7 @@ export enum CellType {
   Outflow,
   SolidFreeSlip,  // This two are solid
   SolidNoSlip,    //
+  OutflowMembrane
 }
 
 export enum IntegrationMethod {
@@ -25,12 +26,16 @@ export type SimulationConfig = {
 
   integrationMethod: IntegrationMethod,
 
+  clampBacktrace: true,
+
   poissonIterations: number,
   poissonRelaxationFactor: number,
 
   kinematicViscosity: number,
   diffusionIterations: number,
   diffusionRelaxationFactor: number,
+
+  dustExponentialDecayConstant: number,
 }
 
 // This is kind of singleton of the simulation. Contains all simulation parameters and data.

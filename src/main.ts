@@ -4,11 +4,12 @@ import { SimulationConfig } from './core/fluid.js'
 import { Simulation } from './core/simulation.js';
 import * as ic from './core/initialConditions.js';
 import { Renderer } from './render/Renderer.js';
+import { loadConfig, loadFromFolder, loadSimulationConfig } from './load/loader.js';
 
 async function main() {
   const [device, canvasTextureFormat] = await initWebGPU();
 
-  const simCfg: SimulationConfig = {
+  /*const simCfg: SimulationConfig = {
     numX: config.numX,
     numY: config.numY,
     dx: config.dx,
@@ -19,25 +20,37 @@ async function main() {
 
     integrationMethod: config.numIntegrationMethod,
 
+    clampBacktrace: true,
+
     poissonIterations: config.iterations,
     poissonRelaxationFactor: config.relaxationFactor,
 
     kinematicViscosity: config.kinematicViscosity,
     diffusionIterations: config.diffusionIterations,
     diffusionRelaxationFactor: config.diffusionRelaxationFactor,
-  }
+
+    dustExponentialDecayConstant: config.dustExponentialDecayConstant
+  }*/
+
+  const path = './assets/TeslaSmall2/';
+  const configAll = await loadConfig(path + 'config.yaml');
+  const simCfg = configAll.simulationConfig;
+  const renderCfg = configAll.renderConfig;
+  console.log('Simulation config:', simCfg);
+  console.log('Render config:', renderCfg);
+  //const simCfg = await loadSimulationConfig(path + 'simulationConfig.yaml');
+  const initialConditions = await loadFromFolder(path);
   //const initialConditions = ic.blowInTank();
   //const initialConditions = ic.flowOverBackwardFacingStepNoSlip();
   //const initialConditions = ic.flowOverBackwardFacingStepFreeSlip();
   //const initialConditions = ic.twoFlows();
   //const initialConditions = ic.twoCounterFlows();
   //const initialConditions = ic.flowPastObstacleFreeSlip();
-  const initialConditions = ic.flowPastObstacleNoSlip();
+  //const initialConditions = ic.flowPastObstacleNoSlip();
   //const initialConditions = ic.uniformFlow();
   const simulation = await Simulation.create(device, simCfg, initialConditions);
-
-  const renderer = await Renderer.create(device, canvasTextureFormat, simulation.fluid);
-
+  
+  const renderer = await Renderer.create(device, canvasTextureFormat, renderCfg, simulation.fluid);
 
   let frameNr = 0;
   function update() {

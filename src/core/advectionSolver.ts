@@ -25,7 +25,8 @@ export class AdvectionSolver {
         numX: simCfg.numX,
         numY: simCfg.numY,
         dtOverH: simCfg.dt / simCfg.dx,
-        integrationMethod: simCfg.integrationMethod
+        integrationMethod: simCfg.integrationMethod,
+        isClampBacktrace: simCfg.clampBacktrace ? 1 : 0
       },
       'Force solver compute pipeline',
       'advectVelocity'
@@ -55,7 +56,9 @@ export class AdvectionSolver {
         numY: simCfg.numY,
         dtOverH: simCfg.dt / simCfg.dx,
         dt: simCfg.dt,
-        integrationMethod: simCfg.integrationMethod
+        integrationMethod: simCfg.integrationMethod,
+        // Implicit Euler exponential decay
+        dustDecayMult: 1.0 / (1.0 + simCfg.dustExponentialDecayConstant * simCfg.dt),
       },
       'Advect and emit dust',
       'advectAndEmitDust'

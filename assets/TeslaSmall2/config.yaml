@@ -1,0 +1,45 @@
+simulationConfig:
+  numX: 792
+  numY: 512
+  dx: 0.01  # simulation cells in meters
+  dt: 0.02  # simulation step in seconds
+
+  workgroupSizeX: 8
+  workgroupSizeY: 8
+
+  # 0 - Euler
+  # 1 - Midpoint
+  integrationMethod: 1
+
+  clampBacktrace: true
+
+  poissonIterations: 20
+  poissonRelaxationFactor: 1.5
+
+  kinematicViscosity: 1e-3
+  diffusionIterations: 10
+  diffusionRelaxationFactor: 1.5
+
+  # https://en.wikipedia.org/wiki/Exponential_decay
+  dustExponentialDecayConstant: 0.05
+
+loadConfig:
+  maxInflow: 1.0
+  maxMass: 1.0
+
+renderConfig:
+  drawArrows: true
+  arrowsStride: 16  # Draw arrows at every 'stride' pixel
+  arrowsUnitLength: 0.025 # Normalized visual lendth of an arrow of the unit length.
+
+  velocityMin: 0.0
+  velocityMax: 1.0
+
+  forceMin: 0.0
+  forceMax: 1.0
+
+  dustMin: 0.0
+  dustMax: 1.0
+
+  pressureMin: 0.0
+  pressureMax: 0.25
