@@ -1,3 +1,4 @@
+import { loadText } from '../util/util.js';
 import { PipelineBuilder, TextureManager } from '../util/utilGPU.js';
 import { RendererToTexture, textureToScreen } from './RendererToTexture.js';
 function createCanvas(label) {
@@ -27,22 +28,28 @@ function getWGPUContext(canvas) {
     return context;
 }
 export class Renderer {
+    renderConfig;
+    fluid;
     textureManager;
     rendererToTexture;
     renderPipeline;
     renderBindGroup;
+    arrowRenderPipeline;
+    arrowVelBindGroups;
+    arrowFBindGroups;
     //rendererToTextore: RendererToTexture;
+    // The order here is the order in which canvases are displayed
     static canvasVel = createCanvas('Abs velocity');
+    static canvasDust = createCanvas('Dust density');
     static canvasP = createCanvas('Pressure correction');
     static canvasF = createCanvas('External force');
-    static canvasDust = createCanvas('Dust density');
     static canvasBorder = createCanvas('Cell types');
     static canvasSDF = createCanvas('SDF');
     static canvases = [
         this.canvasVel,
+        this.canvasDust,
         this.canvasP,
         this.canvasF,
-        this.canvasDust,
         this.canvasBorder,
         this.canvasSDF
     ];
@@ -60,14 +67,19 @@ export class Renderer {
         this.contextSDF,
         this.contextBorder
     ];
-    constructor(device, canvasTextureFormat, simCfg, textureManager, rendererToTexture, renderPipeline, renderBindGroup) {
+    constructor(device, canvasTextureFormat, renderConfig, fluid, textureManager, rendererToTexture, renderPipeline, renderBindGroup, arrowRenderPipeline, arrowVelBindGroups, arrowFBindGroups) {
+        this.renderConfig = renderConfig;
+        this.fluid = fluid;
         this.textureManager = textureManager;
         this.rendererToTexture = rendererToTexture;
         this.renderPipeline = renderPipeline;
         this.renderBindGroup = renderBindGroup;
+        this.arrowRenderPipeline = arrowRenderPipeline;
+        this.arrowVelBindGroups = arrowVelBindGroups;
+        this.arrowFBindGroups = arrowFBindGroups;
         Renderer.canvases.forEach(canvas => {
-            canvas.width = simCfg.numX;
-            canvas.height = simCfg.numY;
+            canvas.width = fluid.simCfg.numX;
+            canvas.height = fluid.simCfg.numY;
         });
         Renderer.contexts.forEach(context => {
             context.configure({
@@ -76,9 +88,9 @@ export class Renderer {
             });
         });
     }
-    static async create(device, canvasTextureFormat, fluid) {
+    static async create(device, canvasTextureFormat, renderConfig, fluid) {
         const textureManager = TextureManager.create(device, fluid.simCfg.numX, fluid.simCfg.numY);
-        const rendererToTexture = await RendererToTexture.create(device, textureManager.view, fluid);
+        const rendererToTexture = await RendererToTexture.create(device, textureManager.view, fluid, renderConfig);
         //// Render info
         //
         const renderPipeline = await PipelineBuilder.createRenderPipeline(device, './render/textureToScreen.wgsl', canvasTextureFormat, 'Textured quad pipeline');
@@ -91,7 +103,62 @@ export class Renderer {
         });
         //
         //// Render info
-        return new Renderer(device, canvasTextureFormat, fluid.simCfg, textureManager, rendererToTexture, renderPipeline, renderBindGroup);
+        const arrowShaderCode = await loadText('./render/arrow.wgsl');
+        const arrowShaderModule = device.createShaderModule({
+            label: 'Arrow shader',
+            code: arrowShaderCode,
+        });
+        const arrowRenderPipeline = device.createRenderPipeline({
+            label: 'Arrow pipeline',
+            layout: 'auto',
+            vertex: {
+                module: arrowShaderModule,
+                entryPoint: 'vs',
+                constants: {
+                    numX: fluid.simCfg.numX,
+                    numY: fluid.simCfg.numY,
+                    stride: renderConfig.arrowsStride,
+                    unitLength: renderConfig.arrowsUnitLength
+                }
+            },
+            fragment: {
+                module: arrowShaderModule,
+                entryPoint: 'fs',
+                targets: [{ format: canvasTextureFormat }],
+            },
+            primitive: {
+                topology: 'line-list', // or 'line-strip'
+            },
+        });
+        const arrowVelBindGroups = [0, 1].map(i => device.createBindGroup({
+            label: `Velocity arrow ${i}`,
+            layout: arrowRenderPipeline.getBindGroupLayout(0),
+            entries: [{
+                    binding: 0,
+                    resource: { buffer: fluid.u[i] }
+                }, {
+                    binding: 1,
+                    resource: { buffer: fluid.v[i] }
+                }, {
+                    binding: 2,
+                    resource: { buffer: fluid.b }
+                }]
+        }));
+        const arrowFBindGroup = device.createBindGroup({
+            label: `Force arrow`,
+            layout: arrowRenderPipeline.getBindGroupLayout(0),
+            entries: [{
+                    binding: 0,
+                    resource: { buffer: fluid.fu }
+                }, {
+                    binding: 1,
+                    resource: { buffer: fluid.fv }
+                }, {
+                    binding: 2,
+                    resource: { buffer: fluid.b }
+                }]
+        });
+        return new Renderer(device, canvasTextureFormat, renderConfig, fluid, textureManager, rendererToTexture, renderPipeline, renderBindGroup, arrowRenderPipeline, arrowVelBindGroups, arrowFBindGroup);
     }
     destroy() {
         this.textureManager.texture.destroy();
@@ -99,13 +166,43 @@ export class Renderer {
             context.unconfigure();
         });
     }
+    renderArrows(commandEncoder, context, bindGroup) {
+        const stride = this.renderConfig.arrowsStride;
+        const numPerX = Math.floor(this.fluid.simCfg.numX / stride);
+        const numPerY = Math.floor(this.fluid.simCfg.numY / stride);
+        const numArrows = numPerX * numPerY;
+        const renderPassDescriptor = {
+            label: 'Texture to Screen',
+            colorAttachments: [{
+                    //view: Renderer.contextVel.getCurrentTexture().createView(),
+                    view: context.getCurrentTexture().createView(),
+                    clearValue: [0.3, 0.3, 0.3, 0], // Clear to transparent
+                    //loadOp: 'clear',
+                    loadOp: 'load',
+                    storeOp: 'store',
+                }],
+        };
+        // Execute render pass
+        const pass = commandEncoder.beginRenderPass(renderPassDescriptor);
+        pass.setPipeline(this.arrowRenderPipeline);
+        //pass.setBindGroup(0, this.arrowVelBindGroups[this.fluid.pingPongIndexVel]);
+        pass.setBindGroup(0, bindGroup);
+        pass.draw(6, numArrows); // call the vertex shader 6 times
+        pass.end();
+    }
     renderAll(commandEncoder) {
         this.rendererToTexture.renderVelocity(commandEncoder);
         textureToScreen(Renderer.contextVel, commandEncoder, this.renderPipeline, this.renderBindGroup);
+        if (this.renderConfig.drawArrows) {
+            this.renderArrows(commandEncoder, Renderer.contextVel, this.arrowVelBindGroups[this.fluid.pingPongIndexVel]);
+        }
         this.rendererToTexture.renderPressure(commandEncoder);
         textureToScreen(Renderer.contextP, commandEncoder, this.renderPipeline, this.renderBindGroup);
         this.rendererToTexture.renderForce(commandEncoder);
         textureToScreen(Renderer.contextF, commandEncoder, this.renderPipeline, this.renderBindGroup);
+        if (this.renderConfig.drawArrows) {
+            this.renderArrows(commandEncoder, Renderer.contextF, this.arrowFBindGroups);
+        }
         this.rendererToTexture.renderDust(commandEncoder);
         textureToScreen(Renderer.contextDust, commandEncoder, this.renderPipeline, this.renderBindGroup);
         this.rendererToTexture.renderBorder(commandEncoder);

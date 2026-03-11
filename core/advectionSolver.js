@@ -22,7 +22,8 @@ export class AdvectionSolver {
             numX: simCfg.numX,
             numY: simCfg.numY,
             dtOverH: simCfg.dt / simCfg.dx,
-            integrationMethod: simCfg.integrationMethod
+            integrationMethod: simCfg.integrationMethod,
+            isClampBacktrace: simCfg.clampBacktrace ? 1 : 0
         }, 'Force solver compute pipeline', 'advectVelocity');
         const advectVelocityBindGroups = [0, 1].map(i => createBindGroup(device, advectVelocityPipeline, [
             fluid.u[i],
@@ -40,7 +41,9 @@ export class AdvectionSolver {
             numY: simCfg.numY,
             dtOverH: simCfg.dt / simCfg.dx,
             dt: simCfg.dt,
-            integrationMethod: simCfg.integrationMethod
+            integrationMethod: simCfg.integrationMethod,
+            // Implicit Euler exponential decay
+            dustDecayMult: 1.0 / (1.0 + simCfg.dustExponentialDecayConstant * simCfg.dt),
         }, 'Advect and emit dust', 'advectAndEmitDust');
         // There are 2 ping-pong values for velocity components and 2 ping-pong values for dust density.
         // So there are total 2*2 bind groups...

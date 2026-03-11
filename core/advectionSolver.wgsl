@@ -46,6 +46,10 @@ const IntegrationMethod_Midpoint: IntegrationMethod = 1;
 
 override isClampBacktrace = true;
 
+// https://en.wikipedia.org/wiki/Exponential_decay
+// 1 / (1 + lambda * dt) from implicit Euler
+override dustDecayMult: f32 = 1.0;
+
 fn cellIndex(x: i32, y: i32) -> i32 {
   return y * numX + x;
 }
@@ -311,6 +315,8 @@ fn advectAndEmitDust(@builtin(global_invocation_id) id: vec3u) {
     dustM = max(dustM, 0.0);
     // Emission
     dustM += dt * e[i];
+    // Exponential decay
+    dustM *= dustDecayMult;
   }
   // Just copy for another cells. For inflow cells it's actually important.
   else {

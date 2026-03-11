@@ -6,6 +6,7 @@ export var CellType;
     CellType[CellType["Outflow"] = 2] = "Outflow";
     CellType[CellType["SolidFreeSlip"] = 3] = "SolidFreeSlip";
     CellType[CellType["SolidNoSlip"] = 4] = "SolidNoSlip";
+    CellType[CellType["OutflowMembrane"] = 5] = "OutflowMembrane";
 })(CellType || (CellType = {}));
 export var IntegrationMethod;
 (function (IntegrationMethod) {

@@ -2,7 +2,7 @@ import { loadText } from './util.js';
 export async function initWebGPU() {
     // Get WebGPU context
     if (!navigator.gpu) {
-        throw new Error('WebGPU not supported');
+        throw new Error('WebGPU is not supported');
     }
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) {
