@@ -1,6 +1,6 @@
 simulationConfig:
-  numX: 792
-  numY: 512
+  numX: 420
+  numY: 425
   dx: 0.01  # simulation cells in meters
   dt: 0.02  # simulation step in seconds
 
@@ -16,7 +16,7 @@ simulationConfig:
   poissonIterations: 20
   poissonRelaxationFactor: 1.5
 
-  kinematicViscosity: 1e-4
+  kinematicViscosity: 0
   diffusionIterations: 10
   diffusionRelaxationFactor: 1.5
 

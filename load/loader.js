@@ -4,6 +4,8 @@ import { allocateIC } from '../core/initialConditions.js';
 //import yaml from '../lib/js-yaml.min.js';
 //import yaml from 'https://esm.sh/js-yaml';
 import yaml from '../lib/js-yaml.mjs';
+// Using the bare specifier - the browser resolves it via the import map
+//import yaml from 'js-yaml';
 // https://www.webdevtutor.net/blog/typescript-yaml-load
 export async function loadSimulationConfig(path) {
     let simCfg;

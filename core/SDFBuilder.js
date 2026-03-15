@@ -1,19 +1,73 @@
+import { createBindGroup, executeComputePass, PipelineBuilder } from '../util/utilGPU.js';
 import { CellType } from './fluid.js';
 export class SDFBuilder {
     cellTypeArray;
     numX;
     numY;
-    sdf;
+    //sdf: Float32Array;
     constructor(cellTypeArray, numX, numY) {
         this.cellTypeArray = cellTypeArray;
         this.numX = numX;
         this.numY = numY;
-        this.sdf = this.buildSDF();
+        //this.sdf = this.buildSDF();
     }
     buildSDF() {
         return this.buildSDFByLines();
     }
-    // Exact SDF by lines. Good for sstraight borders.
+    async buildSDFGPU(device, b, sdf, workgroupSizeX = 8, workgroupSizeY = 8) {
+        // Build boundary lines
+        const horLineArray = this.getHorizontalLines();
+        const verLineArray = this.getVerticalLines();
+        // Make flat arrays
+        const floatsPerLine = 3;
+        const horLineData = new Float32Array(horLineArray.length * floatsPerLine);
+        horLineArray.forEach((horLine, index) => {
+            horLineData[index * floatsPerLine + 0] = horLine.y;
+            horLineData[index * floatsPerLine + 1] = horLine.leftX;
+            horLineData[index * floatsPerLine + 2] = horLine.rightX;
+        });
+        const verLineData = new Float32Array(verLineArray.length * floatsPerLine);
+        verLineArray.forEach((verLine, index) => {
+            verLineData[index * floatsPerLine + 0] = verLine.x;
+            verLineData[index * floatsPerLine + 1] = verLine.bottomY;
+            verLineData[index * floatsPerLine + 2] = verLine.topY;
+        });
+        // Create GPU buffers
+        const numCells = this.numX * this.numY;
+        const floatSizeBytes = 4;
+        const horLineBuffer = device.createBuffer({
+            label: 'Horizontal lines',
+            size: horLineData.length * floatSizeBytes,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const verLineBuffer = device.createBuffer({
+            label: 'Vertical lines',
+            size: verLineData.length * floatSizeBytes,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+        });
+        const queue = device.queue;
+        queue.writeBuffer(horLineBuffer, 0, horLineData.buffer);
+        queue.writeBuffer(verLineBuffer, 0, verLineData.buffer);
+        // 
+        const computePipeline = await PipelineBuilder.createComputePipeline(device, './core/SDFBuilder.wgsl', {
+            workgroupSizeX: workgroupSizeX,
+            workgroupSizeY: workgroupSizeY,
+            numX: this.numX,
+            numY: this.numY,
+        }, 'SDF builder');
+        const bindGroup = createBindGroup(device, computePipeline, [sdf, horLineBuffer, verLineBuffer, b], `SDF builder`);
+        //
+        const commandEncoder = device.createCommandEncoder();
+        const workgroupCountX = Math.ceil(this.numX / workgroupSizeX);
+        const workgroupCountY = Math.ceil(this.numY / workgroupSizeY);
+        executeComputePass(commandEncoder, computePipeline, bindGroup, workgroupCountX, workgroupCountY);
+        const commandBuffer = commandEncoder.finish();
+        device.queue.submit([commandBuffer]);
+        // Clean GPU buffers
+        horLineBuffer.destroy();
+        verLineBuffer.destroy();
+    }
+    // Exact SDF by lines. Good for straight borders.
     // Assumes that there is at least 1 cell width boundary at the border.
     buildSDFByLines() {
         const numCells = this.numX * this.numY;

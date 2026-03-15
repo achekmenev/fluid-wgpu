@@ -247,7 +247,7 @@ export class RendererToTexture {
         //this.device.queue.writeBuffer(this.sdfMinMaxBuffer, 0, this.uniformValues);
         const simCfg = this.fluid.simCfg;
         const minDist = Math.min(simCfg.numX, simCfg.numY);
-        this.setMinMaxScalar(this.sdfMinMaxBuffer, -0.25 * minDist, 0.5 * minDist);
+        this.setMinMaxScalar(this.sdfMinMaxBuffer, -0.5 * minDist, 0.5 * minDist);
         executeComputePass(commandEncoder, this.scalarToTexturePipeline, this.sdfToTextureBindGroup, this.fluid.workgroupCountX, this.fluid.workgroupCountY);
     }
     renderForce(commandEncoder) {

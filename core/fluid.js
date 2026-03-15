@@ -64,8 +64,12 @@ export class Fluid {
         // Note that it's not f32 but u32 buffer. But such buffers have same size.
         this.b = this.createBuffer('Boundary information');
         this.d = this.createBuffer('SDF');
-        const sdf = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY).sdf;
-        this.setInitialConditions(initialConditions, sdf);
+        //const sdf = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY).sdf;
+        const sdfBuilder = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY);
+        //const sdf = sdfBuilder.buildSDF();
+        //this.setInitialConditions(initialConditions, sdf);
+        this.setInitialConditions(initialConditions, undefined);
+        sdfBuilder.buildSDFGPU(device, this.b, this.d);
     }
     destroyResources() {
         this.u.forEach(buffer => buffer.destroy());
@@ -115,6 +119,9 @@ export class Fluid {
         queue.writeBuffer(this.b, 0, ic.b.buffer);
         queue.writeBuffer(this.m[this.pingPongIndexM], 0, ic.m.buffer);
         queue.writeBuffer(this.e, 0, ic.e.buffer);
-        queue.writeBuffer(this.d, 0, sdf.buffer);
+        // If undefined it must be set later
+        if (sdf != undefined) {
+            queue.writeBuffer(this.d, 0, sdf.buffer);
+        }
     }
 }

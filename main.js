@@ -3,6 +3,10 @@ import { initWebGPU } from './util/utilGPU.js';
 import { Simulation } from './core/simulation.js';
 import { Renderer } from './render/Renderer.js';
 import { loadConfig, loadFromFolder } from './load/loader.js';
+//import Stats from './lib/stats.module.js';
+//import Stats from '.lib/stats.min.js';
+import Stats from 'stats.js';
+//declare const Stats: any;
 async function main() {
     const [device, canvasTextureFormat] = await initWebGPU();
     /*const simCfg: SimulationConfig = {
@@ -28,6 +32,7 @@ async function main() {
       dustExponentialDecayConstant: config.dustExponentialDecayConstant
     }*/
     const path = './assets/TeslaSmall2/';
+    //const path = './assets/CommunVessels/';
     const configAll = await loadConfig(path + 'config.yaml');
     const simCfg = configAll.simulationConfig;
     const renderCfg = configAll.renderConfig;
@@ -45,8 +50,17 @@ async function main() {
     //const initialConditions = ic.uniformFlow();
     const simulation = await Simulation.create(device, simCfg, initialConditions);
     const renderer = await Renderer.create(device, canvasTextureFormat, renderCfg, simulation.fluid);
+    // Stats.js setup
+    // 2. Create a new Stats object
+    const stats = new Stats();
+    // 3. Set the initial panel to display (0: fps, 1: ms, 2: mb)
+    stats.showPanel(0);
+    // 4. Append the stats container to the body
+    document.body.appendChild(stats.dom);
     let frameNr = 0;
-    function update() {
+    function update(now) {
+        // 5. Begin the measurement for this frame
+        stats.begin();
         if (!config.pause) {
             const commandEncoder = device.createCommandEncoder();
             simulation.step(commandEncoder);
@@ -55,6 +69,8 @@ async function main() {
             const commandBuffer = commandEncoder.finish();
             device.queue.submit([commandBuffer]);
         }
+        // 6. End the measurement for this frame
+        stats.end();
         if (config.updateIntervalMs == 0) {
             requestAnimationFrame(update);
         }
@@ -63,7 +79,8 @@ async function main() {
         //console.log(`fluid.pingPongIndexVel: ${fluid.pingPongIndexVel}`)
     }
     if (config.updateIntervalMs == 0) {
-        update();
+        //update();
+        requestAnimationFrame(update);
     }
     else {
         setInterval(update, config.updateIntervalMs);
