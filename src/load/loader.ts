@@ -6,6 +6,9 @@ import { InitialConditions, allocateIC } from '../core/initialConditions.js'
 import yaml from '../lib/js-yaml.mjs';
 import { RenderConfig } from '../render/Renderer.js';
 
+// Using the bare specifier - the browser resolves it via the import map
+//import yaml from 'js-yaml';
+
 // https://www.webdevtutor.net/blog/typescript-yaml-load
 export async function loadSimulationConfig(path: string): Promise<SimulationConfig> {
   let simCfg: SimulationConfig;

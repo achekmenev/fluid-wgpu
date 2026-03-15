@@ -6,6 +6,11 @@ import * as ic from './core/initialConditions.js';
 import { Renderer } from './render/Renderer.js';
 import { loadConfig, loadFromFolder, loadSimulationConfig } from './load/loader.js';
 
+//import Stats from './lib/stats.module.js';
+//import Stats from '.lib/stats.min.js';
+import Stats from 'stats.js';
+//declare const Stats: any;
+
 async function main() {
   const [device, canvasTextureFormat] = await initWebGPU();
 
@@ -33,6 +38,7 @@ async function main() {
   }*/
 
   const path = './assets/TeslaSmall2/';
+  //const path = './assets/CommunVessels/';
   const configAll = await loadConfig(path + 'config.yaml');
   const simCfg = configAll.simulationConfig;
   const renderCfg = configAll.renderConfig;
@@ -49,11 +55,23 @@ async function main() {
   //const initialConditions = ic.flowPastObstacleNoSlip();
   //const initialConditions = ic.uniformFlow();
   const simulation = await Simulation.create(device, simCfg, initialConditions);
-  
+
   const renderer = await Renderer.create(device, canvasTextureFormat, renderCfg, simulation.fluid);
 
+  // Stats.js setup
+
+  // 2. Create a new Stats object
+  const stats = new Stats();
+  // 3. Set the initial panel to display (0: fps, 1: ms, 2: mb)
+  stats.showPanel(0);
+  // 4. Append the stats container to the body
+  document.body.appendChild(stats.dom);
+
   let frameNr = 0;
-  function update() {
+  function update(now: number) {
+    // 5. Begin the measurement for this frame
+    stats.begin();
+
     if (!config.pause) {
       const commandEncoder = device.createCommandEncoder();
 
@@ -66,6 +84,9 @@ async function main() {
       device.queue.submit([commandBuffer]);
     }
 
+    // 6. End the measurement for this frame
+    stats.end();
+
     if (config.updateIntervalMs == 0) {
       requestAnimationFrame(update);
     }
@@ -75,7 +96,8 @@ async function main() {
   }
 
   if (config.updateIntervalMs == 0) {
-    update();
+    //update();
+    requestAnimationFrame(update);
   }
   else {
     setInterval(update, config.updateIntervalMs);

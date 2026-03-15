@@ -39,7 +39,7 @@ describe('SDF bulder', () => {
       -Math.SQRT1_2, -0.5, -Math.SQRT1_2
     ]);
 
-    const builtSDB = new SDFBuilder(cellTypeArray, numX, numY).sdf;
+    const builtSDB = new SDFBuilder(cellTypeArray, numX, numY).buildSDF();
     expect(areFloat32ArraysEqual(builtSDB, expectedSDF)).toBeTruthy();
   });
 
@@ -62,7 +62,8 @@ describe('SDF bulder', () => {
       -Math.SQRT1_2, -0.5, -0.5, -0.5, -0.5, -0.5, -Math.SQRT1_2,
     ]);
 
-    const builtSDB = new SDFBuilder(cellTypeArray, numX, numY).sdf;
+    //const builtSDB = new SDFBuilder(cellTypeArray, numX, numY).sdf;
+    const builtSDB = new SDFBuilder(cellTypeArray, numX, numY).buildSDF();
     expect(areFloat32ArraysEqual(builtSDB, expectedSDF)).toBeTruthy();
   });
 });

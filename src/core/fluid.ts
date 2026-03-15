@@ -107,8 +107,12 @@ export class Fluid {
 
     this.d = this.createBuffer('SDF');
 
-    const sdf = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY).sdf;
-    this.setInitialConditions(initialConditions, sdf);
+    //const sdf = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY).sdf;
+    const sdfBuilder = new SDFBuilder(initialConditions.b, initialConditions.numX, initialConditions.numY);
+    //const sdf = sdfBuilder.buildSDF();
+    //this.setInitialConditions(initialConditions, sdf);
+    this.setInitialConditions(initialConditions, undefined);
+    sdfBuilder.buildSDFGPU(device, this.b, this.d);
   }
 
   destroyResources(): void {
@@ -153,7 +157,7 @@ export class Fluid {
     return y * this.simCfg.numX + x;
   }
 
-  private setInitialConditions(ic: InitialConditions, sdf: Float32Array): void {
+  private setInitialConditions(ic: InitialConditions, sdf: Float32Array | undefined): void {
     if (this.simCfg.numX != ic.numX || this.simCfg.numY != ic.numY) {
       throw new Error(`Simulation size (${this.simCfg.numX}, ${this.simCfg.numY}) does not match with initial condition size (${ic.numX}, ${ic.numY})`);
     }
@@ -180,6 +184,9 @@ export class Fluid {
 
     queue.writeBuffer(this.e, 0, ic.e.buffer);
 
-    queue.writeBuffer(this.d, 0, sdf.buffer);
+    // If undefined it must be set later
+    if (sdf != undefined) {
+      queue.writeBuffer(this.d, 0, sdf.buffer);
+    }
   }
 }

@@ -1,0 +1,2 @@
+# Ignore everything in the folder when calculating statistics
+/src/lib/** linguist-vendored
